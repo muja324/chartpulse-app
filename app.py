@@ -72,8 +72,15 @@ for symbol in symbols:
     st.markdown(f"---\n### 🔎 {symbol}")
     df = fetch_data(symbol)
 
-    if df.empty or "Close" not in df.columns or df["Close"].isnull().all():
-        st.warning(f"⚠️ No data for {symbol}")
+    # ✅ Safe check to avoid ValueError
+    if df.empty:
+        st.warning(f"⚠️ No data for {symbol} (DataFrame is empty)")
+        continue
+    elif "Close" not in df.columns:
+        st.warning(f"⚠️ 'Close' column not found for {symbol}")
+        continue
+    elif df["Close"].isnull().all():
+        st.warning(f"⚠️ All values in 'Close' column are NaN for {symbol}")
         continue
 
     df = indicators(df)
@@ -85,13 +92,25 @@ for symbol in symbols:
         rsi = df["RSI"].iloc[-1]
         macd = df["MACD"].iloc[-1]
 
-        st.markdown(f"**Price:** ₹{safe_fmt(latest)} | 📈 BO: ₹{safe_fmt(breakout)} | 📉 BD: ₹{safe_fmt(breakdown)} | RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}")
+        st.markdown(
+            f"**Price:** ₹{safe_fmt(latest)} | "
+            f"📈 BO: ₹{safe_fmt(breakout)} | "
+            f"📉 BD: ₹{safe_fmt(breakdown)} | "
+            f"RSI: {safe_fmt(rsi,1)} | "
+            f"MACD: {safe_fmt(macd)}"
+        )
 
         alert = None
         if pd.notna(latest) and pd.notna(breakout) and latest > breakout:
-            alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}\n📊 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+            alert = (
+                f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}\n"
+                f"📊 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+            )
         elif pd.notna(latest) and pd.notna(breakdown) and latest < breakdown:
-            alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}\n📉 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+            alert = (
+                f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}\n"
+                f"📉 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+            )
 
         if enable_alerts and alert:
             if send_alert(alert):
