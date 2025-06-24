@@ -11,7 +11,7 @@ BOT_TOKEN = st.secrets["BOT_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 REFRESH_INTERVAL = int(st.secrets.get("REFRESH_INTERVAL", 5))
 
-# Auto-refresh every X minutes
+# Auto-refresh
 st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="datarefresh")
 
 # UI setup
@@ -43,8 +43,9 @@ def indicators(df):
 
 def plot_chart(df, symbol):
     fig = go.Figure(data=[go.Candlestick(
-        x=df.index, open=df["Open"],
-        high=df["High"], low=df["Low"], close=df["Close"]
+        x=df.index,
+        open=df["Open"], high=df["High"],
+        low=df["Low"], close=df["Close"]
     )])
     fig.update_layout(title=f"{symbol} - 15 Min Chart", height=400)
     st.plotly_chart(fig, use_container_width=True)
@@ -58,18 +59,25 @@ def send_alert(text):
         st.warning(f"Telegram alert failed: {e}")
         return False
 
+def safe_fmt(val, digits=2):
+    try:
+        return f"{val:.{digits}f}"
+    except:
+        return "N/A"
+
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 st.markdown(f"🕒 Last checked: `{now}`")
 
 for symbol in symbols:
     st.markdown(f"---\n### 🔎 {symbol}")
     df = fetch_data(symbol)
+
     if df.empty or "Close" not in df.columns or df["Close"].isnull().all():
-        st.warning(f"⚠️ No usable data for {symbol}")
+        st.warning(f"⚠️ No data for {symbol}")
         continue
 
     df = indicators(df)
-    
+
     try:
         latest = df["Close"].iloc[-1]
         breakout = df["High"].tail(20).max()
@@ -77,14 +85,13 @@ for symbol in symbols:
         rsi = df["RSI"].iloc[-1]
         macd = df["MACD"].iloc[-1]
 
-        st.markdown(f"**Price:** ₹{latest:.2f} | 📈 BO: ₹{breakout:.2f} | 📉 BD: ₹{breakdown:.2f} | RSI: {rsi:.1f} | MACD: {macd:.2f}")
+        st.markdown(f"**Price:** ₹{safe_fmt(latest)} | 📈 BO: ₹{safe_fmt(breakout)} | 📉 BD: ₹{safe_fmt(breakdown)} | RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}")
 
-        if latest > breakout:
-            alert = f"🚀 *{symbol} Breakout!* ₹{latest:.2f} > ₹{breakout:.2f}\n📊 RSI: {rsi:.1f} | MACD: {macd:.2f}"
-        elif latest < breakdown:
-            alert = f"⚠️ *{symbol} Breakdown!* ₹{latest:.2f} < ₹{breakdown:.2f}\n📉 RSI: {rsi:.1f} | MACD: {macd:.2f}"
-        else:
-            alert = None
+        alert = None
+        if pd.notna(latest) and pd.notna(breakout) and latest > breakout:
+            alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}\n📊 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+        elif pd.notna(latest) and pd.notna(breakdown) and latest < breakdown:
+            alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}\n📉 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
 
         if enable_alerts and alert:
             if send_alert(alert):
@@ -99,4 +106,4 @@ for symbol in symbols:
                 st.error(f"Chart error: {e}")
 
     except Exception as e:
-        st.error(f"⚠️ Failed to process data for {symbol}: {e}")
+        st.error(f"❌ Error processing {symbol}: {e}")
