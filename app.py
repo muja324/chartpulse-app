@@ -11,7 +11,7 @@ BOT_TOKEN = st.secrets["BOT_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 REFRESH_INTERVAL = int(st.secrets.get("REFRESH_INTERVAL", 5))
 
-# Auto-refresh every REFRESH_INTERVAL mins
+# Auto-refresh every X minutes
 st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="datarefresh")
 
 # UI setup
@@ -33,6 +33,7 @@ def fetch_data(symbol):
 def indicators(df):
     df["RSI"] = df["Close"].rolling(14).apply(
         lambda x: 100 - (100 / (1 + (x.diff().clip(lower=0).sum() / x.diff().clip(upper=0).abs().sum())))
+        if x.diff().clip(upper=0).abs().sum() != 0 else None
     )
     exp1 = df["Close"].ewm(span=12).mean()
     exp2 = df["Close"].ewm(span=26).mean()
@@ -63,34 +64,39 @@ st.markdown(f"🕒 Last checked: `{now}`")
 for symbol in symbols:
     st.markdown(f"---\n### 🔎 {symbol}")
     df = fetch_data(symbol)
-    if df.empty or "Close" not in df.columns:
-        st.error(f"No data for {symbol}")
+    if df.empty or "Close" not in df.columns or df["Close"].isnull().all():
+        st.warning(f"⚠️ No usable data for {symbol}")
         continue
 
     df = indicators(df)
-    latest = df["Close"].iloc[-1]
-    breakout = df["High"].tail(20).max()
-    breakdown = df["Low"].tail(20).min()
-    rsi = df["RSI"].iloc[-1]
-    macd = df["MACD"].iloc[-1]
+    
+    try:
+        latest = df["Close"].iloc[-1]
+        breakout = df["High"].tail(20).max()
+        breakdown = df["Low"].tail(20).min()
+        rsi = df["RSI"].iloc[-1]
+        macd = df["MACD"].iloc[-1]
 
-    st.markdown(f"**Price:** ₹{latest:.2f} | 📈 BO: ₹{breakout:.2f} | 📉 BD: ₹{breakdown:.2f} | RSI: {rsi:.1f} | MACD: {macd:.2f}")
+        st.markdown(f"**Price:** ₹{latest:.2f} | 📈 BO: ₹{breakout:.2f} | 📉 BD: ₹{breakdown:.2f} | RSI: {rsi:.1f} | MACD: {macd:.2f}")
 
-    if latest > breakout:
-        alert = f"🚀 *{symbol} Breakout!* ₹{latest:.2f} > ₹{breakout:.2f}\n📊 RSI: {rsi:.1f} | MACD: {macd:.2f}"
-    elif latest < breakdown:
-        alert = f"⚠️ *{symbol} Breakdown!* ₹{latest:.2f} < ₹{breakdown:.2f}\n📉 RSI: {rsi:.1f} | MACD: {macd:.2f}"
-    else:
-        alert = None
-
-    if enable_alerts and alert:
-        if send_alert(alert):
-            st.success("Telegram alert sent.")
+        if latest > breakout:
+            alert = f"🚀 *{symbol} Breakout!* ₹{latest:.2f} > ₹{breakout:.2f}\n📊 RSI: {rsi:.1f} | MACD: {macd:.2f}"
+        elif latest < breakdown:
+            alert = f"⚠️ *{symbol} Breakdown!* ₹{latest:.2f} < ₹{breakdown:.2f}\n📉 RSI: {rsi:.1f} | MACD: {macd:.2f}"
         else:
-            st.warning("Failed to send alert.")
+            alert = None
 
-    if show_chart:
-        try:
-            plot_chart(df, symbol)
-        except Exception as e:
-            st.error(f"Chart error: {e}")
+        if enable_alerts and alert:
+            if send_alert(alert):
+                st.success("Telegram alert sent.")
+            else:
+                st.warning("Failed to send alert.")
+
+        if show_chart:
+            try:
+                plot_chart(df, symbol)
+            except Exception as e:
+                st.error(f"Chart error: {e}")
+
+    except Exception as e:
+        st.error(f"⚠️ Failed to process data for {symbol}: {e}")
