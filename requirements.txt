@@ -1,5 +1,5 @@
-streamlit
-yfinance
+streamlit==1.33.0
+yfinance==0.2.37
 requests
 pandas
 plotly
