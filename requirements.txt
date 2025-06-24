@@ -1,6 +1,7 @@
-streamlit==1.33.0
-yfinance==0.2.37
+streamlit
+yfinance
 requests
 pandas
 plotly
 python-dotenv
+streamlit_autorefresh
