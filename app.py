@@ -5,37 +5,29 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from custom_ui import apply_ui
-from responsive_tabs import show_navigation
 from loader import show_loader
+from responsive_tabs import show_navigation
 
-# --- Page config ---
+# --- Page Setup ---
 st.set_page_config(page_title="ChartPulse", layout="wide")
 st.title("📈 ChartPulse — Live Stock Signal Tracker")
 
-# --- Sidebar settings ---
+# --- Sidebar Settings ---
 st.sidebar.header("⚙️ Settings")
-symbols = st.sidebar.text_area("Enter Stock Symbols (comma-separated)", "RELIANCE.NS, TCS.NS").split(",")
+symbols = st.sidebar.text_area("Stock Symbols (comma-separated)", "RELIANCE.NS, TCS.NS").split(",")
 symbols = [s.strip().upper() for s in symbols if s.strip()]
+show_chart = st.sidebar.checkbox("📊 Show Chart", True)
+enable_alerts = st.sidebar.checkbox("📲 Telegram Alerts", False)
 
-show_chart = st.sidebar.checkbox("📊 Show Candlestick Chart", True)
-enable_alerts = st.sidebar.checkbox("📲 Send Telegram Alerts", False)
-
-# --- Timeframe selector ---
-interval = st.selectbox(
-    "🕒 Select Interval",
-    ["15m", "30m", "1h", "1d"],
-    index=3,
-    help="Choose timeframe for price chart & signal analysis"
-)
-
-# --- Period selection ---
+# --- Interval Selector ---
+interval = st.selectbox("🕒 Select Interval", ["15m", "30m", "1h", "1d"], index=3)
 period = "6mo" if interval == "1d" else "5d"
 
-# --- Auto-refresh ---
-REFRESH_INTERVAL = 1  # in minutes
-st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="autorefresh")
+# --- Auto Refresh (1 min) ---
+REFRESH_INTERVAL = 1
+st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="refresh")
 
-# --- Telegram secrets (optional) ---
+# --- Secrets (if enabled) ---
 BOT_TOKEN = st.secrets.get("BOT_TOKEN", "")
 CHAT_ID = st.secrets.get("CHAT_ID", "")
 
@@ -47,7 +39,7 @@ def fetch_data(symbol):
         return pd.DataFrame()
 
 def is_data_invalid(df):
-    return df.empty or "Close" not in df.columns or df["Close"].isnull().all()
+    return df.empty or "Close" not in df or df["Close"].isnull().all()
 
 def plot_chart(df, symbol):
     fig = go.Figure(data=[go.Candlestick(
@@ -55,7 +47,7 @@ def plot_chart(df, symbol):
         open=df["Open"], high=df["High"],
         low=df["Low"], close=df["Close"]
     )])
-    fig.update_layout(title=f"{symbol} - {interval} Chart", height=400)
+    fig.update_layout(title=f"{symbol} — {interval} Chart", height=400)
     st.plotly_chart(fig, use_container_width=True)
 
 def send_alert(text):
@@ -63,9 +55,10 @@ def send_alert(text):
         return False
     try:
         import requests
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        data = {"chat_id": CHAT_ID, "text": text}
-        return requests.post(url, data=data).status_code == 200
+        return requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            data={"chat_id": CHAT_ID, "text": text}
+        ).status_code == 200
     except:
         return False
 
@@ -78,7 +71,7 @@ def safe_fmt(val, digits=2):
 # --- Main Display ---
 view = show_navigation()
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.markdown(f"🕒 Last updated: `{now}`")
+st.markdown(f"🕒 Last Updated: `{now}`")
 
 if view == "📈 Live Feed":
     for symbol in symbols:
@@ -90,7 +83,7 @@ if view == "📈 Live Feed":
             st.warning(f"⚠️ No valid data for {symbol}")
             continue
 
-        apply_ui(df)
+        apply_ui(df)  # 🧠 Signal + Styling
 
         latest = df["Close"].iloc[-1]
         breakout = df["High"].tail(20).max()
@@ -104,7 +97,6 @@ if view == "📈 Live Feed":
             f"RSI: {safe_fmt(rsi,1)}"
         )
 
-        # Alert Logic
         alert = None
         if latest > breakout:
             alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
@@ -115,10 +107,10 @@ if view == "📈 Live Feed":
             if send_alert(alert):
                 st.success("Telegram alert sent.")
             else:
-                st.warning("Failed to send alert.")
+                st.warning("Alert failed.")
 
         if show_chart:
             try:
                 plot_chart(df, symbol)
             except Exception as e:
-                st.error(f"Chart error: {e}")
+                st.error(f"Chart Error: {e}")
