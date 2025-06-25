@@ -107,6 +107,13 @@ if view == "📈 Live Feed":
         st.markdown(f"---\n### 🔍 {symbol}")
         show_loader(f"Fetching {symbol}...")
         df = fetch_data(symbol)
+        if df.empty or "Close" not in df.columns:
+    st.warning(f"⚠️ No data found for {symbol}")
+    continue
+
+if len(df) < 30:
+    st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} rows)")
+    continue
         apply_ui(df)  # Place BEFORE data validation
         if is_data_invalid(df):
             st.warning(f"⚠️ No valid data for {symbol}")
