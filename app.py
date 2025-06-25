@@ -112,9 +112,9 @@ if view == "📈 Live Feed":
         apply_ui(df)
 
         try:
-            latest = df["Close"].iloc[-1]
-            breakout = df["High"].tail(20).max()
-            breakdown = df["Low"].tail(20).min()
+            latest = float(df["Close"].iloc[-1])
+            breakout = float(df["High"].tail(20).max())
+            breakdown = float(df["Low"].tail(20).min())
 
             rsi = None
             if "RSI" in df.columns:
