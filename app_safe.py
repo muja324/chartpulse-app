@@ -5,6 +5,8 @@ import pandas as pd
 import requests
 import plotly.graph_objects as go
 from datetime import datetime
+from custom_ui import apply_ui
+apply_ui(data)
 #add this dropdown for timeframes
 interval = st.selectbox(
     "🕒 Select Interval",
