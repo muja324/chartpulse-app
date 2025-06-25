@@ -98,8 +98,7 @@ if view == "📈 Live Feed":
             continue
 
         apply_ui(df)  # 🧠 Signal + Styling
-
-        try:
+try:
     latest = df["Close"].iloc[-1]
     breakout = df["High"].tail(20).max()
     breakdown = df["Low"].tail(20).min()
