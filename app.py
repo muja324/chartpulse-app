@@ -8,7 +8,7 @@ from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
 
-# --- Test Block ---
+# --- Optional Test Block ---
 st.subheader("🧪 Test: Download yfinance data")
 try:
     test_df = yf.download("RELIANCE.NS", period="5d", interval="15m")
@@ -118,27 +118,28 @@ if view == "📈 Live Feed":
 
             rsi = None
             if "RSI" in df.columns:
-                rsi_series = df["RSI"].dropna()
-                if not rsi_series.empty:
-                    rsi = rsi_series.iloc[-1]
+                rsi_vals = df["RSI"].dropna()
+                if not rsi_vals.empty:
+                    rsi = rsi_vals.iloc[-1]
 
             macd = None
             if "MACD" in df.columns:
-                macd_series = df["MACD"].dropna()
-                if not macd_series.empty:
-                    macd = macd_series.iloc[-1]
+                macd_vals = df["MACD"].dropna()
+                if not macd_vals.empty:
+                    macd = macd_vals.iloc[-1]
 
             st.markdown(
                 f"**Price:** ₹{safe_fmt(latest)} | "
                 f"📈 BO: ₹{safe_fmt(breakout)} | "
                 f"📉 BD: ₹{safe_fmt(breakdown)} | "
-                f"RSI: {safe_fmt(rsi, 1)}"
+                f"RSI: {safe_fmt(rsi, 1)} | "
+                f"MACD: {safe_fmt(macd)}"
             )
 
             alert = None
-            if latest > breakout:
+            if breakout is not None and latest > breakout:
                 alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
-            elif latest < breakdown:
+            elif breakdown is not None and latest < breakdown:
                 alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
 
             if enable_alerts and alert:
@@ -151,4 +152,5 @@ if view == "📈 Live Feed":
                 plot_chart(df, symbol)
 
         except Exception as e:
-            st.error(f"⚠️ Processing error for **{symbol}**: {e}")
+            import traceback
+            st.error(f"⚠️ Processing error for **{symbol
