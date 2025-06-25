@@ -7,6 +7,8 @@ from datetime import datetime
 from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
+
+# --- Test Block ---
 st.subheader("🧪 Test: Download yfinance data")
 try:
     test_df = yf.download("RELIANCE.NS", period="5d", interval="15m")
@@ -14,7 +16,7 @@ try:
         st.warning("⚠️ Data fetched but it's empty.")
     else:
         st.success("✅ Data downloaded successfully!")
-        st.write(test_df.tail())  # Display last few rows
+        st.write(test_df.tail())
 except Exception as e:
     st.error(f"❌ Failed to fetch data: {e}")
 
@@ -33,11 +35,11 @@ enable_alerts = st.sidebar.checkbox("📲 Telegram Alerts", False)
 interval = st.selectbox("🕒 Select Interval", ["15m", "30m", "1h", "1d"], index=3)
 period = "6mo" if interval == "1d" else "5d"
 
-# --- Auto Refresh (1 min) ---
+# --- Auto Refresh ---
 REFRESH_INTERVAL = 1
 st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="refresh")
 
-# --- Secrets (if enabled) ---
+# --- Secrets ---
 BOT_TOKEN = st.secrets.get("BOT_TOKEN", "")
 CHAT_ID = st.secrets.get("CHAT_ID", "")
 
@@ -59,14 +61,7 @@ def is_data_invalid(df):
         close = df["Close"]
         if close.isnull().all():
             return True
-    except Exception:
-        return True
-    return False
-    try:
-        close = df["Close"]
-        if close.isnull().all():
-            return True
-    except Exception:
+    except:
         return True
     return False
 
@@ -107,44 +102,50 @@ if view == "📈 Live Feed":
         st.markdown(f"---\n### 🔍 {symbol}")
         show_loader(f"Fetching {symbol}...")
         df = fetch_data(symbol)
-if df.empty or "Close" not in df.columns:
-    st.warning(f"⚠️ No data found for {symbol}")
-    continue
-if len(df) < 30:
-    st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} rows)")
-    continue
-    apply_ui(df)  # Place BEFORE data validation
-if is_data_invalid(df):
-    st.warning(f"⚠️ No valid data for {symbol}")
-    continue
-    apply_ui(df)  # 🧠 Signal + Styling
 
-        latest = df["Close"].iloc[-1]
-        breakout = df["High"].tail(20).max()
-        breakdown = df["Low"].tail(20).min()
-        rsi = df.get("RSI", pd.Series()).iloc[-1] if "RSI" in df else None
+        if df.empty or "Close" not in df.columns:
+            st.warning(f"⚠️ No data found for {symbol}")
+            continue
 
-        st.markdown(
-            f"**Price:** ₹{safe_fmt(latest)} | "
-            f"📈 BO: ₹{safe_fmt(breakout)} | "
-            f"📉 BD: ₹{safe_fmt(breakdown)} | "
-            f"RSI: {safe_fmt(rsi,1)}"
-        )
+        if len(df) < 30:
+            st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} rows)")
+            continue
 
-        alert = None
-        if latest > breakout:
-            alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
-        elif latest < breakdown:
-            alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
+        if is_data_invalid(df):
+            st.warning(f"⚠️ No valid data for {symbol}")
+            continue
 
-        if enable_alerts and alert:
-            if send_alert(alert):
-                st.success("Telegram alert sent.")
-            else:
-                st.warning("Alert failed.")
+        apply_ui(df)  # 🧠 Signal + Styling
 
-        if show_chart:
-            try:
-                plot_chart(df, symbol)
-            except Exception as e:
-                st.error(f"Chart Error: {e}")
+        try:
+            latest = df["Close"].iloc[-1]
+            breakout = df["High"].tail(20).max()
+            breakdown = df["Low"].tail(20).min()
+            rsi = df.get("RSI", pd.Series()).iloc[-1] if "RSI" in df else None
+
+            st.markdown(
+                f"**Price:** ₹{safe_fmt(latest)} | "
+                f"📈 BO: ₹{safe_fmt(breakout)} | "
+                f"📉 BD: ₹{safe_fmt(breakdown)} | "
+                f"RSI: {safe_fmt(rsi,1)}"
+            )
+
+            alert = None
+            if latest > breakout:
+                alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
+            elif latest < breakdown:
+                alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
+
+            if enable_alerts and alert:
+                if send_alert(alert):
+                    st.success("Telegram alert sent.")
+                else:
+                    st.warning("Alert failed.")
+
+            if show_chart:
+                try:
+                    plot_chart(df, symbol)
+                except Exception as e:
+                    st.error(f"Chart Error: {e}")
+        except Exception as e:
+            st.error(f"⚠️ Processing error for {symbol}: {e}")
