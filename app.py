@@ -51,18 +51,12 @@ def fetch_data(symbol):
         return pd.DataFrame()
 
 def is_data_invalid(df):
-    if not isinstance(df, pd.DataFrame):
-        return True
-    if df.empty:
+    if not isinstance(df, pd.DataFrame) or df.empty:
         return True
     if "Close" not in df.columns:
         return True
-    try:
-        close = df["Close"]
-        if close.isnull().all():
-            return True
-    except:
-        return True
+    if df["Close"].dropna().shape[0] < 5:
+        return True  # not enough clean data points
     return False
 
 def plot_chart(df, symbol):
