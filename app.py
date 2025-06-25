@@ -153,4 +153,4 @@ if view == "📈 Live Feed":
 
         except Exception as e:
             import traceback
-            st.error(f"⚠️ Processing error for **{symbol}**"
+            st.error(f"⚠️ Processing error for **{symbol}**")
