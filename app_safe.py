@@ -8,8 +8,8 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Load Secrets
-BOT_TOKEN = st.secrets.get("BOT_TOKEN", "")
-CHAT_ID = st.secrets.get("CHAT_ID", "")
+BOT_TOKEN = st.secrets.get("7934586337:AAGTBfUruRDbB1M4HKlBsf1C3FdZpdgJJIE", "")
+CHAT_ID = st.secrets.get("689374593", "")
 REFRESH_INTERVAL = int(st.secrets.get("REFRESH_INTERVAL", 5))
 
 # Auto-refresh
