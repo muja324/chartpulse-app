@@ -117,7 +117,7 @@ if len(df) < 30:
 if is_data_invalid(df):
     st.warning(f"⚠️ No valid data for {symbol}")
     continue
-        apply_ui(df)  # 🧠 Signal + Styling
+    apply_ui(df)  # 🧠 Signal + Styling
 
         latest = df["Close"].iloc[-1]
         breakout = df["High"].tail(20).max()
