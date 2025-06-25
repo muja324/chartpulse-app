@@ -1,4 +1,3 @@
-
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import yfinance as yf
@@ -6,7 +5,19 @@ import pandas as pd
 import requests
 import plotly.graph_objects as go
 from datetime import datetime
+#add this dropdown for timeframes
+interval = st.selectbox(
+    "🕒 Select Interval",
+    ["15m", "30m", "1h", "1d"],
+    index=3,
+    help="Choose timeframe for price chart & signal analysis"
+)
 
+# Optional: auto-adjust period
+if interval == "1d":
+    period = "3mo"
+else:
+    period = "5d"
 # Load Secrets
 BOT_TOKEN = st.secrets.get("7934586337:AAGTBfUruRDbB1M4HKlBsf1C3FdZpdgJJIE", "")
 CHAT_ID = st.secrets.get("689374593", "")
