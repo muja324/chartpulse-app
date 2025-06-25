@@ -8,18 +8,6 @@ from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
 
-# --- Test Block ---
-st.subheader("🧪 Test: Download yfinance data")
-try:
-    test_df = yf.download("RELIANCE.NS", period="5d", interval="15m")
-    if test_df.empty:
-        st.warning("⚠️ Data fetched but it's empty.")
-    else:
-        st.success("✅ Data downloaded successfully!")
-        st.write(test_df.tail())
-except Exception as e:
-    st.error(f"❌ Failed to fetch data: {e}")
-
 # --- Page Setup ---
 st.set_page_config(page_title="ChartPulse", layout="wide")
 st.title("📈 ChartPulse — Live Stock Signal Tracker")
@@ -115,8 +103,8 @@ if view == "📈 Live Feed":
             latest = df["Close"].iloc[-1]
             breakout = df["High"].tail(20).max()
             breakdown = df["Low"].tail(20).min()
-            rsi = df.get("RSI", pd.Series()).iloc[-1] if "RSI" in df else None
-
+            rsi_series = df.get("RSI", pd.Series()).dropna()
+            rsi = rsi_series.iloc[-1] if not rsi_series.empty else None
             st.markdown(
                 f"**Price:** ₹{safe_fmt(latest)} | "
                 f"📈 BO: ₹{safe_fmt(breakout)} | "
