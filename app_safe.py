@@ -110,16 +110,18 @@ for symbol in symbols:
         )
 
         alert = None
+
         if pd.notna(latest) and pd.notna(breakout) and latest > breakout:
             alert = (
                 f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}\n"
-                f"📊 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
+                f"📊 RSI: {safe_fmt(rsi, 1)} | MACD: {safe_fmt(macd)}"
             )
+
         elif pd.notna(latest) and pd.notna(breakdown) and latest < breakdown:
             alert = (
                 f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}\n"
-                f"📉 RSI: {safe_fmt(rsi,1)} | MACD: {safe_fmt(macd)}"
-f fetch_data(symbol):
+                f"📉 RSI: {safe_fmt(rsi, 1)} | MACD: {safe_fmt(macd)}"
+            )
     try:
         return yf.download(symbol, period="5d", interval="15m")
     except:
