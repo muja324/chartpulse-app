@@ -100,34 +100,44 @@ if view == "📈 Live Feed":
         apply_ui(df)  # 🧠 Signal + Styling
 
         try:
+            # 1) Close, High, Low → guaranteed scalars
             latest = df["Close"].iloc[-1]
             breakout = df["High"].tail(20).max()
             breakdown = df["Low"].tail(20).min()
+
+            # 2) RSI safe extraction
             rsi_series = df.get("RSI", pd.Series()).dropna()
-            rsi = rsi_series.iloc[-1] if not rsi_series.empty else None
+            latest_rsi = rsi_series.iloc[-1] if len(rsi_series) else None
+
+            # 3) MACD safe extraction (agar use kar raha hai)
+            macd_series = df.get("MACD", pd.Series()).dropna()
+            latest_macd = macd_series.iloc[-1] if len(macd_series) else None
+
+            # 4) Display
             st.markdown(
                 f"**Price:** ₹{safe_fmt(latest)} | "
                 f"📈 BO: ₹{safe_fmt(breakout)} | "
                 f"📉 BD: ₹{safe_fmt(breakdown)} | "
-                f"RSI: {safe_fmt(rsi,1)}"
+                f"RSI: {safe_fmt(latest_rsi,1)}"
             )
 
+            # 5) Alert logic only on scalars
             alert = None
             if latest > breakout:
                 alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
             elif latest < breakdown:
                 alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
 
+            # 6) Telegram
             if enable_alerts and alert:
                 if send_alert(alert):
                     st.success("Telegram alert sent.")
                 else:
                     st.warning("Alert failed.")
 
+            # 7) Chart
             if show_chart:
-                try:
-                    plot_chart(df, symbol)
-                except Exception as e:
-                    st.error(f"Chart Error: {e}")
+                plot_chart(df, symbol)
+
         except Exception as e:
             st.error(f"⚠️ Processing error for {symbol}: {e}")
