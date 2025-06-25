@@ -45,7 +45,18 @@ def is_data_invalid(df):
         return True
     if "Close" not in df.columns:
         return True
-    if df["Close"].isnull().all():
+    def is_data_invalid(df):
+    if not isinstance(df, pd.DataFrame):
+        return True
+    if df.empty:
+        return True
+    if "Close" not in df.columns:
+        return True
+    try:
+        close = df["Close"]
+        if close.isnull().all():
+            return True
+    except Exception:
         return True
     return False
 
