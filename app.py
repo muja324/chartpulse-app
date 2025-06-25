@@ -39,7 +39,15 @@ def fetch_data(symbol):
         return pd.DataFrame()
 
 def is_data_invalid(df):
-    return df.empty or "Close" not in df or df["Close"].isnull().all()
+    if not isinstance(df, pd.DataFrame):
+        return True
+    if df.empty:
+        return True
+    if "Close" not in df.columns:
+        return True
+    if df["Close"].isnull().all():
+        return True
+    return False
 
 def plot_chart(df, symbol):
     fig = go.Figure(data=[go.Candlestick(
