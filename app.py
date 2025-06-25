@@ -32,7 +32,8 @@ BOT_TOKEN = st.secrets.get("BOT_TOKEN", "")
 CHAT_ID = st.secrets.get("CHAT_ID", "")
 
 # --- Helper Functions ---
-def fetch_data(symbol):
+def fetch_data(symbol):st.write("📦 Data shape:", df.shape)      # ❌ df undefined at this point
+st.write("📦 Columns:", df.columns.tolist())  # ❌ same here
     try:
         return yf.download(symbol, period=period, interval=interval, progress=False)
     except:
