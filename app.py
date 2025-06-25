@@ -7,6 +7,16 @@ from datetime import datetime
 from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
+st.subheader("🧪 Test: Download yfinance data")
+try:
+    test_df = yf.download("RELIANCE.NS", period="5d", interval="15m")
+    if test_df.empty:
+        st.warning("⚠️ Data fetched but it's empty.")
+    else:
+        st.success("✅ Data downloaded successfully!")
+        st.write(test_df.tail())  # Display last few rows
+except Exception as e:
+    st.error(f"❌ Failed to fetch data: {e}")
 
 # --- Page Setup ---
 st.set_page_config(page_title="ChartPulse", layout="wide")
