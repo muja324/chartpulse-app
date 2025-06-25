@@ -97,7 +97,7 @@ if view == "📈 Live Feed":
         st.markdown(f"---\n### 🔍 {symbol}")
         show_loader(f"Fetching {symbol}...")
         df = fetch_data(symbol)
-
+        apply_ui(df)  # Place BEFORE data validation
         if is_data_invalid(df):
             st.warning(f"⚠️ No valid data for {symbol}")
             continue
