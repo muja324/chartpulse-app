@@ -8,6 +8,18 @@ from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
 
+# --- Test Block ---
+st.subheader("🧪 Test: Download yfinance data")
+try:
+    test_df = yf.download("RELIANCE.NS", period="5d", interval="15m")
+    if test_df.empty:
+        st.warning("⚠️ Data fetched but it's empty.")
+    else:
+        st.success("✅ Data downloaded successfully!")
+        st.write(test_df.tail())
+except Exception as e:
+    st.error(f"❌ Failed to fetch data: {e}")
+
 # --- Page Setup ---
 st.set_page_config(page_title="ChartPulse", layout="wide")
 st.title("📈 ChartPulse — Live Stock Signal Tracker")
@@ -44,7 +56,7 @@ def is_data_invalid(df):
     if "Close" not in df.columns:
         return True
     if df["Close"].dropna().shape[0] < 5:
-        return True  # not enough clean data points
+        return True
     return False
 
 def plot_chart(df, symbol):
@@ -97,47 +109,46 @@ if view == "📈 Live Feed":
             st.warning(f"⚠️ No valid data for {symbol}")
             continue
 
-        apply_ui(df)  # 🧠 Signal + Styling
-try:
-    latest = df["Close"].iloc[-1]
-    breakout = df["High"].tail(20).max()
-    breakdown = df["Low"].tail(20).min()
+        apply_ui(df)
 
-    # ✅ Safe RSI pull
-    rsi = None
-    if "RSI" in df.columns:
-        clean_rsi = df["RSI"].dropna()
-        if not clean_rsi.empty:
-            rsi = clean_rsi.iloc[-1]
+        try:
+            latest = df["Close"].iloc[-1]
+            breakout = df["High"].tail(20).max()
+            breakdown = df["Low"].tail(20).min()
 
-    # ✅ Safe MACD pull (if you use it)
-    macd = None
-    if "MACD" in df.columns:
-        clean_macd = df["MACD"].dropna()
-        if not clean_macd.empty:
-            macd = clean_macd.iloc[-1]
+            rsi = None
+            if "RSI" in df.columns:
+                rsi_series = df["RSI"].dropna()
+                if not rsi_series.empty:
+                    rsi = rsi_series.iloc[-1]
 
-    st.markdown(
-        f"**Price:** ₹{safe_fmt(latest)} | "
-        f"📈 BO: ₹{safe_fmt(breakout)} | "
-        f"📉 BD: ₹{safe_fmt(breakdown)} | "
-        f"RSI: {safe_fmt(rsi,1)}"
-    )
+            macd = None
+            if "MACD" in df.columns:
+                macd_series = df["MACD"].dropna()
+                if not macd_series.empty:
+                    macd = macd_series.iloc[-1]
 
-    alert = None
-    if latest > breakout:
-        alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
-    elif latest < breakdown:
-        alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
+            st.markdown(
+                f"**Price:** ₹{safe_fmt(latest)} | "
+                f"📈 BO: ₹{safe_fmt(breakout)} | "
+                f"📉 BD: ₹{safe_fmt(breakdown)} | "
+                f"RSI: {safe_fmt(rsi, 1)}"
+            )
 
-    if enable_alerts and alert:
-        if send_alert(alert):
-            st.success("Telegram alert sent.")
-        else:
-            st.warning("Alert failed.")
+            alert = None
+            if latest > breakout:
+                alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
+            elif latest < breakdown:
+                alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
 
-    if show_chart:
-        plot_chart(df, symbol)
+            if enable_alerts and alert:
+                if send_alert(alert):
+                    st.success("Telegram alert sent.")
+                else:
+                    st.warning("Alert failed.")
 
-except Exception as e:
-    st.error(f"⚠️ Processing error for {symbol}: {e}")
+            if show_chart:
+                plot_chart(df, symbol)
+
+        except Exception as e:
+            st.error(f"⚠️ Processing error for **{symbol}**: {e}")
