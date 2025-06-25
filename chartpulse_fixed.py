@@ -1,4 +1,3 @@
-
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import yfinance as yf
@@ -7,23 +6,23 @@ import requests
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Load Secrets (with fallback defaults for testing)
+# Secrets
 BOT_TOKEN = st.secrets.get("BOT_TOKEN", "")
 CHAT_ID = st.secrets.get("CHAT_ID", "")
 REFRESH_INTERVAL = int(st.secrets.get("REFRESH_INTERVAL", 5))
 
 # Auto-refresh
-st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="datarefresh")
+st_autorefresh(interval=REFRESH_INTERVAL * 60 * 1000, key="refresh")
 
-# UI setup
+# UI
 st.set_page_config(page_title="ChartPulse", layout="wide")
 st.title("📈 ChartPulse — Live Stock Signal Tracker")
 st.sidebar.header("⚙️ Settings")
 
-symbols = st.sidebar.text_area("Enter Stock Symbols (comma-separated)", "RELIANCE.NS, ASTERDM.NS").split(",")
+symbols = st.sidebar.text_area("Enter Stock Symbols", "RELIANCE.NS, ASTERDM.NS").split(",")
 symbols = [s.strip().upper() for s in symbols if s.strip()]
-show_chart = st.sidebar.checkbox("📊 Show Candlestick Chart", True)
-enable_alerts = st.sidebar.checkbox("📲 Send Telegram Alerts", True)
+show_chart = st.sidebar.checkbox("📊 Show Chart", True)
+enable_alerts = st.sidebar.checkbox("📲 Telegram Alerts", True)
 
 def fetch_data(symbol):
     try:
@@ -38,11 +37,9 @@ def is_data_invalid(df):
     if close is None:
         return True
     try:
-        if bool(close.isnull().all()):
-            return True
-    except Exception:
+        return bool(close.isnull().all())
+    except:
         return True
-    return False
 
 def indicators(df):
     df["RSI"] = df["Close"].rolling(14).apply(
@@ -58,22 +55,24 @@ def indicators(df):
 def plot_chart(df, symbol):
     fig = go.Figure(data=[go.Candlestick(
         x=df.index,
-        open=df["Open"], high=df["High"],
-        low=df["Low"], close=df["Close"]
+        open=df["Open"],
+        high=df["High"],
+        low=df["Low"],
+        close=df["Close"]
     )])
     fig.update_layout(title=f"{symbol} - 15 Min Chart", height=400)
     st.plotly_chart(fig, use_container_width=True)
 
 def send_alert(text):
     if not BOT_TOKEN or not CHAT_ID:
-        st.warning("Telegram credentials not set.")
+        st.warning("⚠️ Telegram credentials missing")
         return False
     try:
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         data = {"chat_id": CHAT_ID, "text": text}
         return requests.post(url, data=data).status_code == 200
     except Exception as e:
-        st.warning(f"Telegram alert failed: {e}")
+        st.warning(f"Telegram error: {e}")
         return False
 
 def safe_fmt(val, digits=2):
@@ -82,12 +81,13 @@ def safe_fmt(val, digits=2):
     except:
         return "N/A"
 
+# Live Time
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.markdown(f"🕒 Last checked: `{now}`")
+st.markdown(f"🕒 Last Checked: `{now}`")
 
+# Main Loop
 for symbol in symbols:
-    st.markdown(f"---")
-    st.markdown(f"### 🔎 {symbol}")
+    st.markdown(f"---\n### 🔍 {symbol}")
     df = fetch_data(symbol)
 
     if is_data_invalid(df):
@@ -111,31 +111,31 @@ for symbol in symbols:
             f"MACD: {safe_fmt(macd)}"
         )
 
-        # 🚨 Alert setup
         alert = None
-
         if pd.notna(latest) and pd.notna(breakout) and latest > breakout:
             alert = (
-                f"🚀 *{symbol} Breakout!*
-"
-                f"Price: ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}
-"
-                f"📊 RSI: {safe_fmt(rsi, 1)} | MACD: {safe_fmt(macd)}"
+                "🚀 *{0} Breakout!*\n"
+                "Price: ₹{1} > ₹{2}\n"
+                "📊 RSI: {3} | MACD: {4}".format(
+                    symbol, safe_fmt(latest), safe_fmt(breakout),
+                    safe_fmt(rsi, 1), safe_fmt(macd)
+                )
             )
         elif pd.notna(latest) and pd.notna(breakdown) and latest < breakdown:
             alert = (
-                f"⚠️ *{symbol} Breakdown!*
-"
-                f"Price: ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}
-"
-                f"📉 RSI: {safe_fmt(rsi, 1)} | MACD: {safe_fmt(macd)}"
+                "⚠️ *{0} Breakdown!*\n"
+                "Price: ₹{1} < ₹{2}\n"
+                "📉 RSI: {3} | MACD: {4}".format(
+                    symbol, safe_fmt(latest), safe_fmt(breakdown),
+                    safe_fmt(rsi, 1), safe_fmt(macd)
+                )
             )
 
         if enable_alerts and alert:
             if send_alert(alert):
-                st.success("📤 Telegram alert sent.")
+                st.success("✅ Alert sent on Telegram")
             else:
-                st.warning("⚠️ Failed to send Telegram alert.")
+                st.warning("⚠️ Failed to send alert")
 
         if show_chart:
             try:
