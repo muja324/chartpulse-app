@@ -131,4 +131,46 @@ if view == "📈 Live Feed":
             continue
 
         if len(df) < 30:
-            st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} row
+            st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} rows)")
+            continue
+
+        if is_data_invalid(df):
+            st.warning(f"⚠️ No valid data for {symbol}")
+            continue
+
+        apply_ui(df)
+
+        try:
+            latest = float(df["Close"].iloc[-1])
+            breakout = float(df["High"].tail(20).max())
+            breakdown = float(df["Low"].tail(20).min())
+
+            rsi = float(df["RSI"].dropna().iloc[-1]) if "RSI" in df.columns and not df["RSI"].dropna().empty else None
+            macd = float(df["MACD"].dropna().iloc[-1]) if "MACD" in df.columns and not df["MACD"].dropna().empty else None
+
+            st.markdown(
+                f"**Price:** ₹{safe_fmt(latest)} | "
+                f"📈 BO: ₹{safe_fmt(breakout)} | "
+                f"📉 BD: ₹{safe_fmt(breakdown)} | "
+                f"RSI: {safe_fmt(rsi, 1)} | "
+                f"MACD: {safe_fmt(macd)}"
+            )
+
+            alert = None
+            if breakout is not None and latest > breakout:
+                alert = f"🚀 *{symbol} Breakout!* ₹{safe_fmt(latest)} > ₹{safe_fmt(breakout)}"
+            elif breakdown is not None and latest < breakdown:
+                alert = f"⚠️ *{symbol} Breakdown!* ₹{safe_fmt(latest)} < ₹{safe_fmt(breakdown)}"
+
+            if enable_alerts and alert:
+                if send_alert(alert):
+                    st.success("Telegram alert sent.")
+                else:
+                    st.warning("Alert failed.")
+
+            if show_chart:
+                plot_chart(df, symbol)
+
+        except Exception as e:
+            st.error(f"⚠️ Processing error for **{symbol}**")
+            st.exception(e)
