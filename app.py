@@ -46,9 +46,22 @@ CHAT_ID = st.secrets.get("CHAT_ID", "")
 # --- Helper Functions ---
 def fetch_data(symbol):
     try:
-        return yf.download(symbol, period=period, interval=interval, progress=False)
-    except:
+        df = yf.download(symbol, period=period, interval=interval, progress=False)
+
+        if df.empty or df["Close"].isna().all():
+            st.warning(f"No intraday data for {symbol}. Using daily fallback.")
+            df = yf.download(symbol, period="1mo", interval="1d", progress=False)
+
+        # Clean and standardize
+        df = df.dropna(subset=["Open", "High", "Low", "Close"])
+        df.index = pd.to_datetime(df.index)
+        df.sort_index(inplace=True)
+
+        return df
+    except Exception as e:
+        st.error(f"Error fetching data for {symbol}: {e}")
         return pd.DataFrame()
+
 
 def is_data_invalid(df):
     if not isinstance(df, pd.DataFrame) or df.empty:
@@ -95,38 +108,34 @@ if view == "📈 Live Feed":
     for symbol in symbols:
         st.markdown(f"---\n### 🔍 {symbol}")
         show_loader(f"Fetching {symbol}...")
+
         df = fetch_data(symbol)
 
-        if df.empty or "Close" not in df.columns:
-            st.warning(f"⚠️ No data found for {symbol}")
+        # ✅ Check for empty or incomplete data
+        if df.empty or any(col not in df.columns for col in ["Open", "High", "Low", "Close"]):
+            st.error(f"⚠️ Signal Data Unavailable for {symbol}")
             continue
 
+        # ✅ Check if data is too short
         if len(df) < 30:
             st.info(f"ℹ️ Not enough data for {symbol} (only {len(df)} rows)")
             continue
 
+        # ✅ Additional custom validation
         if is_data_invalid(df):
             st.warning(f"⚠️ No valid data for {symbol}")
             continue
 
+        # ✅ Main UI rendering (signals, chart, etc.)
         apply_ui(df)
 
         try:
-            latest = float(df["Close"].iloc[-1])
-            breakout = float(df["High"].tail(20).max())
-            breakdown = float(df["Low"].tail(20).min())
+            latest = df["Close"].iloc[-1]
+            breakout = df["High"].tail(20).max()
+            breakdown = df["Low"].tail(20).min()
 
-            rsi = None
-            if "RSI" in df.columns:
-                rsi_vals = df["RSI"].dropna()
-                if not rsi_vals.empty:
-                    rsi = rsi_vals.iloc[-1]
-
-            macd = None
-            if "MACD" in df.columns:
-                macd_vals = df["MACD"].dropna()
-                if not macd_vals.empty:
-                    macd = macd_vals.iloc[-1]
+            rsi = df["RSI"].dropna().iloc[-1] if "RSI" in df.columns and not df["RSI"].dropna().empty else None
+            macd = df["MACD"].dropna().iloc[-1] if "MACD" in df.columns and not df["MACD"].dropna().empty else None
 
             st.markdown(
                 f"**Price:** ₹{safe_fmt(latest)} | "
@@ -153,4 +162,5 @@ if view == "📈 Live Feed":
 
         except Exception as e:
             import traceback
-            st.error(f"⚠️ Processing error for **{symbol}**\n\n{traceback.format_exc()}")
+            st.error(f"⚠️ Processing error for **{symbol}**")
+            st.exception(e)
