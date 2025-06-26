@@ -5,8 +5,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 import requests
-import ta  # For technical indicators
+import ta 
 
+# For technical indicators
 from custom_ui import apply_ui
 from loader import show_loader
 from responsive_tabs import show_navigation
