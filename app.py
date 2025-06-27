@@ -66,31 +66,93 @@ def is_data_invalid(df):
     return False
 
 def plot_chart(df, symbol):
-    fig = go.Figure(data=[go.Candlestick(
+    from plotly.subplots import make_subplots
+    import plotly.graph_objects as go
+
+    fig = make_subplots(
+        rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02,
+        row_heights=[0.4, 0.15, 0.2, 0.25],
+        subplot_titles=(f"{symbol} — Candlestick", "Volume", "RSI (14)", "MACD")
+    )
+
+    # --- Candlestick
+    fig.add_trace(go.Candlestick(
         x=df.index,
-        open=df["Open"], high=df["High"],
-        low=df["Low"], close=df["Close"]
-    )])
-    fig.update_layout(title=f"{symbol} — {interval} Chart", height=400)
-    st.plotly_chart(fig, use_container_width=True)
+        open=df["Open"],
+        high=df["High"],
+        low=df["Low"],
+        close=df["Close"],
+        name="Candles",
+        increasing_line_color="#26a69a",
+        decreasing_line_color="#ef5350"
+    ), row=1, col=1)
 
-def send_alert(text):
-    if not BOT_TOKEN or not CHAT_ID:
-        return False
-    try:
-        import requests
-        return requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            data={"chat_id": CHAT_ID, "text": text}
-        ).status_code == 200
-    except:
-        return False
+    # --- Volume
+    fig.add_trace(go.Bar(
+        x=df.index,
+        y=df["Volume"],
+        name="Volume",
+        marker_color="#90caf9"
+    ), row=2, col=1)
 
-def safe_fmt(val, digits=2):
-    try:
-        return f"{val:.{digits}f}"
-    except:
-        return "N/A"
+    # --- RSI
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["RSI"],
+        name="RSI",
+        line=dict(color="#2962FF", width=2)
+    ), row=3, col=1)
+    fig.add_hline(y=70, line_dash="dot", line_color="red", row=3, col=1)
+    fig.add_hline(y=30, line_dash="dot", line_color="green", row=3, col=1)
+
+    # --- MACD
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["MACD"],
+        name="MACD",
+        line=dict(color="blue", width=2)
+    ), row=4, col=1)
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["MACD_signal"],
+        name="MACD Signal",
+        line=dict(color="orange", width=2)
+    ), row=4, col=1)
+
+    # --- Support/Resistance (last 20 candles)
+    resistance = df["High"].tail(20).max()
+    support = df["Low"].tail(20).min()
+    fig.add_hline(y=resistance, line_color="red", line_dash="dash", annotation_text="Resistance", row=1, col=1)
+    fig.add_hline(y=support, line_color="green", line_dash="dash", annotation_text="Support", row=1, col=1)
+
+    # --- Trendline (simple: last 10 close points)
+    trend_df = df["Close"].tail(10)
+    fig.add_trace(go.Scatter(
+        x=trend_df.index,
+        y=trend_df.values,
+        mode="lines",
+        name="Trendline",
+        line=dict(color="purple", width=2, dash="dot")
+    ), row=1, col=1)
+
+    # --- Layout Settings
+    fig.update_layout(
+        height=1000,
+        showlegend=False,
+        template="plotly_white",
+        margin=dict(l=40, r=40, t=50, b=40),
+        dragmode="pan",
+        hovermode="x unified",
+        xaxis=dict(fixedrange=False),
+        yaxis=dict(fixedrange=False),
+        yaxis2=dict(fixedrange=False),
+        yaxis3=dict(fixedrange=False),
+        yaxis4=dict(fixedrange=False),
+        xaxis4_rangeslider_visible=False
+    )
+
+    # --- Scroll Zoom On
+    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True})
 
 # --- Main Display ---
 view = show_navigation()
